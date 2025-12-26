@@ -11,7 +11,7 @@
  * - Touch-friendly with clear visual hierarchy
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Workout, Step } from "@/lib/schemas";
 
@@ -65,6 +65,13 @@ function formatTime(seconds: number): string {
     return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   }
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
+}
+
+function formatDurationShort(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (secs === 0) return `${minutes}min`;
+  return `${minutes}m${secs}s`;
 }
 
 function stepToSegments(step: Step, startTime: number): ChartSegment[] {
@@ -153,6 +160,9 @@ export function WorkoutChart({
   showPowerAxis = true,
   height = 200,
 }: WorkoutChartProps) {
+  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+
   // Convert workout steps to chart segments
   const { segments, totalDuration, maxPower } = useMemo(() => {
     const allSegments: ChartSegment[] = [];
@@ -269,17 +279,41 @@ export function WorkoutChart({
               
               // For ramp segments (warmup/cooldown), use gradient
               const isRamp = segment.powerStart !== segment.powerEnd;
+
+              const handleMouseEnter = (e: React.MouseEvent) => {
+                setHoveredSegment(index);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
+              };
+
+              const handleMouseLeave = () => {
+                setHoveredSegment(null);
+                setTooltipPos(null);
+              };
+
+              const handleTouchStart = (e: React.TouchEvent) => {
+                setHoveredSegment(index);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
+              };
               
               return (
                 <div
                   key={index}
-                  className="relative h-full"
+                  className="relative h-full cursor-pointer"
                   style={{ width: `${widthPercent}%` }}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleMouseLeave}
                 >
                   {isRamp ? (
                     // Ramp with gradient (warmup/cooldown)
                     <svg 
-                      className="absolute bottom-0 w-full"
+                      className={cn(
+                        "absolute bottom-0 w-full transition-opacity",
+                        hoveredSegment === index ? "opacity-80" : ""
+                      )}
                       style={{ height: `${Math.max(startHeightPercent, endHeightPercent)}%` }}
                       preserveAspectRatio="none"
                       viewBox="0 0 100 100"
@@ -298,7 +332,10 @@ export function WorkoutChart({
                   ) : (
                     // Flat segment (steady/intervals)
                     <div
-                      className="absolute bottom-0 w-full transition-all"
+                      className={cn(
+                        "absolute bottom-0 w-full transition-all",
+                        hoveredSegment === index ? "opacity-80 ring-2 ring-white ring-inset" : ""
+                      )}
                       style={{
                         height: `${startHeightPercent}%`,
                         backgroundColor: color,
@@ -310,6 +347,35 @@ export function WorkoutChart({
               );
             })}
           </div>
+
+          {/* Tooltip */}
+          {hoveredSegment !== null && tooltipPos && (
+            <div 
+              className="fixed z-50 pointer-events-none"
+              style={{
+                left: tooltipPos.x,
+                top: tooltipPos.y - 10,
+                transform: "translate(-50%, -100%)",
+              }}
+            >
+              <div className="bg-foreground text-background text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                <div className="font-semibold capitalize mb-1">
+                  {segments[hoveredSegment].type === "intervals" ? "Interval" : segments[hoveredSegment].type}
+                </div>
+                <div className="space-y-0.5">
+                  <div>⏱️ {formatDurationShort(segments[hoveredSegment].duration)}</div>
+                  {segments[hoveredSegment].powerStart === segments[hoveredSegment].powerEnd ? (
+                    <div>⚡ {Math.round(segments[hoveredSegment].powerStart * 100)}% FTP</div>
+                  ) : (
+                    <div>⚡ {Math.round(segments[hoveredSegment].powerStart * 100)}% → {Math.round(segments[hoveredSegment].powerEnd * 100)}% FTP</div>
+                  )}
+                </div>
+              </div>
+              <div 
+                className="w-2 h-2 bg-foreground rotate-45 mx-auto -mt-1"
+              />
+            </div>
+          )}
 
           {/* FTP line at 100% */}
           <div 

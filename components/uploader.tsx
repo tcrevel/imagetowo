@@ -19,6 +19,7 @@ import React, { useCallback, useState, useRef } from "react";
 import { Upload, Camera, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 // ============================================================================
 // Types
@@ -48,6 +49,7 @@ export function Uploader({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const t = useTranslation();
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
@@ -181,7 +183,7 @@ export function Uploader({
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <span className="text-sm text-muted-foreground">
-                  Analyse du workout en cours...
+                  {t("analyzing")}
                 </span>
               </div>
             </div>
@@ -209,10 +211,10 @@ export function Uploader({
           />
           <div className="text-center">
             <p className="text-sm font-medium">
-              {isDragging ? "Déposez votre image ici" : "Glissez-déposez votre image de workout"}
+              {isDragging ? t("dropHere") : t("dropImage")}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              JPEG, PNG, WebP jusqu&apos;à {maxSizeMB}MB
+              {t("maxSize")} {maxSizeMB}MB
             </p>
           </div>
 
@@ -227,7 +229,7 @@ export function Uploader({
               }}
             >
               <Upload className="h-4 w-4 mr-2" />
-              Parcourir
+              {t("browse")}
             </Button>
             <Button
               variant="outline"
@@ -238,7 +240,7 @@ export function Uploader({
               }}
             >
               <Camera className="h-4 w-4 mr-2" />
-              Prendre une photo
+              {t("takePhoto")}
             </Button>
           </div>
         </div>

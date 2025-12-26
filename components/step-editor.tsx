@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/lib/i18n";
 import type { Step, StepType } from "@/lib/schemas";
 
 // ============================================================================
@@ -44,14 +45,6 @@ const STEP_COLORS: Record<StepType, string> = {
   steady: "border-l-green-500 bg-green-500/5",
   intervals: "border-l-red-500 bg-red-500/5",
   freeride: "border-l-gray-500 bg-gray-500/5",
-};
-
-const STEP_LABELS: Record<StepType, string> = {
-  warmup: "Warmup",
-  cooldown: "Cooldown",
-  steady: "Steady State",
-  intervals: "Intervals",
-  freeride: "Free Ride",
 };
 
 // ============================================================================
@@ -91,6 +84,8 @@ export function StepEditor({
   onDragEnd,
   onDragLeave,
 }: StepEditorProps) {
+  const t = useTranslation();
+  
   // Type-safe update functions for each step type
   const updateWarmup = (updates: Partial<Extract<Step, { type: "warmup" }>>) => {
     if (step.type === "warmup") {
@@ -147,7 +142,7 @@ export function StepEditor({
           <span className="text-xs font-medium text-muted-foreground">
             {index + 1}
           </span>
-          <span className="font-medium">{STEP_LABELS[step.type]}</span>
+          <span className="font-medium">{t(step.type)}</span>
         </div>
         <Button
           variant="ghost"
@@ -169,12 +164,12 @@ export function StepEditor({
               onChange={(v) => updateWarmup({ duration_s: v })}
             />
             <PowerField
-              label="Start Power"
+              label={t("startPower")}
               value={step.power_start_pct}
               onChange={(v) => updateWarmup({ power_start_pct: v })}
             />
             <PowerField
-              label="End Power"
+              label={t("endPower")}
               value={step.power_end_pct}
               onChange={(v) => updateWarmup({ power_end_pct: v })}
             />
@@ -188,12 +183,12 @@ export function StepEditor({
               onChange={(v) => updateCooldown({ duration_s: v })}
             />
             <PowerField
-              label="Start Power"
+              label={t("startPower")}
               value={step.power_start_pct}
               onChange={(v) => updateCooldown({ power_start_pct: v })}
             />
             <PowerField
-              label="End Power"
+              label={t("endPower")}
               value={step.power_end_pct}
               onChange={(v) => updateCooldown({ power_end_pct: v })}
             />
@@ -207,7 +202,7 @@ export function StepEditor({
               onChange={(v) => updateSteady({ duration_s: v })}
             />
             <PowerField
-              label="Power"
+              label={t("power")}
               value={step.power_pct}
               onChange={(v) => updateSteady({ power_pct: v })}
             />
@@ -218,7 +213,7 @@ export function StepEditor({
           <>
             <div>
               <Label htmlFor={`repeat-${index}`} className="text-xs">
-                Repeats
+                {t("repeat")}
               </Label>
               <Input
                 id={`repeat-${index}`}
@@ -234,7 +229,7 @@ export function StepEditor({
             </div>
             <div>
               <Label htmlFor={`on-duration-${index}`} className="text-xs">
-                On Duration
+                {t("onDuration")}
               </Label>
               <Input
                 id={`on-duration-${index}`}
@@ -248,7 +243,7 @@ export function StepEditor({
             </div>
             <div>
               <Label htmlFor={`off-duration-${index}`} className="text-xs">
-                Off Duration
+                {t("offDuration")}
               </Label>
               <Input
                 id={`off-duration-${index}`}
@@ -261,12 +256,12 @@ export function StepEditor({
               />
             </div>
             <PowerField
-              label="On Power"
+              label={t("onPower")}
               value={step.on_power_pct}
               onChange={(v) => updateIntervals({ on_power_pct: v })}
             />
             <PowerField
-              label="Off Power"
+              label={t("offPower")}
               value={step.off_power_pct}
               onChange={(v) => updateIntervals({ off_power_pct: v })}
             />
@@ -295,9 +290,10 @@ function DurationField({
   value: number;
   onChange: (value: number) => void;
 }) {
+  const t = useTranslation();
   return (
     <div>
-      <Label className="text-xs">Duration</Label>
+      <Label className="text-xs">{t("duration")}</Label>
       <Input
         value={formatDuration(value)}
         onChange={(e) => onChange(parseDuration(e.target.value))}

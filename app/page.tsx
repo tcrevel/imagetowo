@@ -11,10 +11,12 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { Download, Loader2, ArrowRight, Upload, Sparkles } from "lucide-react";
+import { Download, Loader2, ArrowRight, Upload, Sparkles, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { Uploader } from "@/components/uploader";
 import { WorkoutEditor } from "@/components/workout-editor";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 import type { Workout, ParseResponse } from "@/lib/schemas";
 
 // ============================================================================
@@ -115,18 +117,23 @@ export default function Home() {
     setError(null);
   }, []);
 
+  const t = useTranslation();
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold">ImageToFit</h1>
-          {state === "edit" && (
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              <Upload className="h-4 w-4 mr-2" />
-              New Upload
-            </Button>
-          )}
+          <h1 className="text-xl font-bold">{t("appName")}</h1>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            {state === "edit" && (
+              <Button variant="outline" size="sm" onClick={handleReset}>
+                <Upload className="h-4 w-4 mr-2" />
+                {t("newUpload")}
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -135,13 +142,12 @@ export default function Home() {
         {state === "upload" && (
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Transform Workout Images
+              {t("heroTitle")}
               <br />
-              <span className="text-primary">into .zwo Files</span>
+              <span className="text-primary">{t("heroTitleHighlight")}</span>
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-xl mx-auto">
-              Upload a screenshot of your cycling workout and we&apos;ll convert it
-              to a .zwo file for Zwift, Intervals.icu, or TrainingPeaks.
+              {t("heroDescription")}
             </p>
           </div>
         )}
@@ -161,18 +167,18 @@ export default function Home() {
             <div className="grid gap-4 sm:grid-cols-3 mt-12">
               <FeatureCard
                 icon={<Upload className="h-5 w-5" />}
-                title="Upload Image"
-                description="Drag & drop or take a photo of your workout"
+                title={t("featureUploadTitle")}
+                description={t("featureUploadDesc")}
               />
               <FeatureCard
                 icon={<Sparkles className="h-5 w-5" />}
-                title="AI Parsing"
-                description="Our AI extracts workout structure automatically"
+                title={t("featureAITitle")}
+                description={t("featureAIDesc")}
               />
               <FeatureCard
                 icon={<Download className="h-5 w-5" />}
-                title="Export ZWO"
-                description="Download for Zwift and other platforms"
+                title={t("featureExportTitle")}
+                description={t("featureExportDesc")}
               />
             </div>
           </div>
@@ -181,9 +187,9 @@ export default function Home() {
         {state === "loading" && (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg font-medium">Analyzing your workout...</p>
+            <p className="text-lg font-medium">{t("loadingTitle")}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              This may take a few seconds
+              {t("loadingSubtitle")}
             </p>
           </div>
         )}
@@ -197,27 +203,38 @@ export default function Home() {
               onChange={setWorkout}
             />
 
-            {/* Export Button */}
-            <div className="flex justify-end gap-4">
-              <Button
-                size="lg"
-                onClick={handleExport}
-                disabled={isExporting}
-                className="min-w-[180px]"
-              >
-                {isExporting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export .zwo
-                  </>
-                )}
-              </Button>
+            {/* Export Section */}
+            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-2 border-primary/20 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold">{t("exportReady")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("exportReadyDesc")}
+                  </p>
+                </div>
+                <Button
+                  size="lg"
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="min-w-[200px] h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      {t("exporting")}
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-5 w-5 mr-2" />
+                      {t("downloadZwo")}
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
+
+            {/* Import Instructions */}
+            <ImportInstructions />
 
             {error && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive text-sm">
@@ -232,10 +249,10 @@ export default function Home() {
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
           <p>
-            ImageToFit — Convert workout images to .zwo files
+            {t("footerTagline")}
           </p>
           <p className="mt-1">
-            Compatible with Zwift, Intervals.icu, and TrainingPeaks
+            {t("footerCompatible")}
           </p>
         </div>
       </footer>
@@ -263,6 +280,125 @@ function FeatureCard({
       </div>
       <h3 className="font-medium">{title}</h3>
       <p className="text-sm text-muted-foreground mt-1">{description}</p>
+    </div>
+  );
+}
+
+function ImportInstructions() {
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const t = useTranslation();
+
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section);
+  };
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <h3 className="text-sm font-medium p-4 bg-muted/50 border-b">
+        📖 {t("importTitle")}
+      </h3>
+      
+      {/* Intervals.icu */}
+      <div className="border-b last:border-b-0">
+        <button
+          onClick={() => toggleSection("intervals")}
+          className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">📊</span>
+            <span className="font-medium">Intervals.icu</span>
+          </div>
+          {openSection === "intervals" ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        {openSection === "intervals" && (
+          <div className="px-4 pb-4 text-sm space-y-3">
+            <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+              <li>{t("intervalsStep1")} <a href="https://intervals.icu" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">intervals.icu <ExternalLink className="h-3 w-3" /></a></li>
+              <li>{t("intervalsStep2")}</li>
+              <li>{t("intervalsStep3")}</li>
+              <li>{t("intervalsStep4")}</li>
+              <li>{t("intervalsStep5")}</li>
+              <li>{t("intervalsStep6")}</li>
+            </ol>
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-blue-700 dark:text-blue-300">
+              <strong>💡 {t("tip")} :</strong> {t("intervalsTip")}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* TrainingPeaks */}
+      <div className="border-b last:border-b-0">
+        <button
+          onClick={() => toggleSection("trainingpeaks")}
+          className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🏋️</span>
+            <span className="font-medium">TrainingPeaks</span>
+          </div>
+          {openSection === "trainingpeaks" ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        {openSection === "trainingpeaks" && (
+          <div className="px-4 pb-4 text-sm space-y-3">
+            <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+              <li>{t("tpStep1")} <a href="https://trainingpeaks.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">trainingpeaks.com <ExternalLink className="h-3 w-3" /></a></li>
+              <li>{t("tpStep2")}</li>
+              <li>{t("tpStep3")}</li>
+              <li>{t("tpStep4")}</li>
+              <li>{t("tpStep5")}</li>
+              <li>{t("tpStep6")}</li>
+            </ol>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-amber-700 dark:text-amber-300">
+              <strong>⚠️ {t("note")} :</strong> {t("tpNote")}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Zwift */}
+      <div>
+        <button
+          onClick={() => toggleSection("zwift")}
+          className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🚴</span>
+            <span className="font-medium">Zwift</span>
+          </div>
+          {openSection === "zwift" ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        {openSection === "zwift" && (
+          <div className="px-4 pb-4 text-sm space-y-3">
+            <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+              <li>{t("zwiftStep1")}
+                <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                  <li><strong className="text-foreground">Windows :</strong> <code className="bg-muted px-1 rounded text-xs">Documents\Zwift\Workouts\[{t("yourId")}]</code></li>
+                  <li><strong className="text-foreground">Mac :</strong> <code className="bg-muted px-1 rounded text-xs">Documents/Zwift/Workouts/[{t("yourId")}]</code></li>
+                </ul>
+              </li>
+              <li>{t("zwiftStep2")}</li>
+              <li>{t("zwiftStep3")}</li>
+              <li>{t("zwiftStep4")}</li>
+            </ol>
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-green-700 dark:text-green-300">
+              <strong>✅ {t("tip")} :</strong> {t("zwiftTip")}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

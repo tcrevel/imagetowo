@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StepEditor } from "@/components/step-editor";
 import { WorkoutChart } from "@/components/workout-chart";
+import { useTranslation } from "@/lib/i18n";
 import type { Workout, Step, StepType } from "@/lib/schemas";
 
 // ============================================================================
@@ -83,6 +84,8 @@ export function WorkoutEditor({
 }: WorkoutEditorProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [stepsExpanded, setStepsExpanded] = useState(false);
+  const t = useTranslation();
 
   const updateWorkout = (updates: Partial<Workout>) => {
     onChange({ ...workout, ...updates });
@@ -159,7 +162,7 @@ export function WorkoutEditor({
     <Card className={cn("w-full", className)}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Edit Workout</CardTitle>
+          <CardTitle>{t("editWorkout")}</CardTitle>
           {confidence !== undefined && (
             <ConfidenceBadge confidence={confidence} />
           )}
@@ -174,7 +177,7 @@ export function WorkoutEditor({
               <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-amber-700 dark:text-amber-400">
-                  Parsing Warnings
+                  {t("parsingWarnings")}
                 </p>
                 <ul className="mt-1 text-sm text-amber-600 dark:text-amber-300 space-y-1">
                   {warnings.map((warning, i) => (
@@ -188,12 +191,12 @@ export function WorkoutEditor({
 
         {/* Workout Name */}
         <div>
-          <Label htmlFor="workout-name">Workout Name</Label>
+          <Label htmlFor="workout-name">{t("workoutName")}</Label>
           <Input
             id="workout-name"
             value={workout.name}
             onChange={(e) => updateWorkout({ name: e.target.value })}
-            placeholder="My Workout"
+            placeholder={t("workoutNamePlaceholder")}
             maxLength={100}
             className="mt-1"
           />
@@ -201,12 +204,12 @@ export function WorkoutEditor({
 
         {/* Description */}
         <div>
-          <Label htmlFor="workout-description">Description (optional)</Label>
+          <Label htmlFor="workout-description">{t("description")}</Label>
           <Input
             id="workout-description"
             value={workout.description || ""}
             onChange={(e) => updateWorkout({ description: e.target.value || undefined })}
-            placeholder="Optional description..."
+            placeholder={t("descriptionPlaceholder")}
             className="mt-1"
           />
         </div>
@@ -214,58 +217,81 @@ export function WorkoutEditor({
         {/* Stats */}
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span>
-            <strong>{workout.steps.length}</strong> steps
+            <strong>{workout.steps.length}</strong> {t("steps")}
           </span>
           <span>•</span>
           <span>
-            <strong>{formatTotalTime(totalDuration)}</strong> total
+            <strong>{formatTotalTime(totalDuration)}</strong> {t("total")}
           </span>
         </div>
 
         {/* Workout Chart */}
         {workout.steps.length > 0 && (
           <div className="border rounded-lg p-4 bg-card">
-            <Label className="mb-3 block">Workout Preview</Label>
+            <Label className="mb-3 block">{t("workoutPreview")}</Label>
             <WorkoutChart workout={workout} height={180} />
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              {t("hoverTip")}
+            </p>
           </div>
         )}
 
-        {/* Steps */}
-        <div className="space-y-3">
-          <Label>Workout Steps</Label>
-          {workout.steps.map((step, index) => (
-            <StepEditor
-              key={`step-${index}-${step.type}`}
-              step={step}
-              index={index}
-              onChange={(s) => updateStep(index, s)}
-              onDelete={() => deleteStep(index)}
-              isDragging={draggedIndex === index}
-              isDragOver={dragOverIndex === index}
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              onDragLeave={handleDragLeave}
-            />
-          ))}
-        </div>
+        {/* Steps - Collapsible */}
+        <div className="border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setStepsExpanded(!stepsExpanded)}
+            className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors text-left bg-muted/10"
+          >
+            <div className="flex items-center gap-2">
+              <Label className="cursor-pointer">{t("workoutSteps")}</Label>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {workout.steps.length}
+              </span>
+            </div>
+            {stepsExpanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+          
+          {stepsExpanded && (
+            <div className="p-4 space-y-3 border-t">
+              {workout.steps.map((step, index) => (
+                <StepEditor
+                  key={`step-${index}-${step.type}`}
+                  step={step}
+                  index={index}
+                  onChange={(s) => updateStep(index, s)}
+                  onDelete={() => deleteStep(index)}
+                  isDragging={draggedIndex === index}
+                  isDragOver={dragOverIndex === index}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  onDragLeave={handleDragLeave}
+                />
+              ))}
 
-        {/* Add Step Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <span className="text-sm text-muted-foreground mr-2 flex items-center">
-            <Plus className="h-4 w-4 mr-1" /> Add:
-          </span>
-          {(Object.keys(DEFAULT_STEPS) as StepType[]).map((type) => (
-            <Button
-              key={type}
-              variant="outline"
-              size="sm"
-              onClick={() => addStep(type)}
-              className="capitalize"
-            >
-              {type}
-            </Button>
-          ))}
+              {/* Add Step Buttons */}
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <span className="text-sm text-muted-foreground mr-2 flex items-center">
+                  <Plus className="h-4 w-4 mr-1" /> {t("add")}
+                </span>
+                {(Object.keys(DEFAULT_STEPS) as StepType[]).map((type) => (
+                  <Button
+                    key={type}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addStep(type)}
+                    className="capitalize"
+                  >
+                    {t(type)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -278,6 +304,7 @@ export function WorkoutEditor({
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const percentage = Math.round(confidence * 100);
+  const t = useTranslation();
   
   let color = "bg-green-500/10 text-green-700 dark:text-green-400";
   if (confidence < 0.5) {
@@ -288,7 +315,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 
   return (
     <span className={cn("px-2 py-1 rounded-full text-xs font-medium", color)}>
-      {percentage}% confidence
+      {percentage}% {t("confidence")}
     </span>
   );
 }
