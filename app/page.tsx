@@ -14,6 +14,7 @@ import React, { useState, useCallback } from "react";
 import { Download, Loader2, ArrowRight, Upload, Sparkles, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { Uploader } from "@/components/uploader";
 import { WorkoutEditor } from "@/components/workout-editor";
+import { WorkoutMetrics } from "@/components/workout-metrics";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
@@ -196,6 +197,9 @@ export default function Home() {
 
         {state === "edit" && workout && (
           <div className="space-y-6">
+            {/* Workout Metrics (TSS/IF) */}
+            <WorkoutMetrics workout={workout} />
+
             <WorkoutEditor
               workout={workout}
               warnings={warnings}
@@ -204,11 +208,15 @@ export default function Home() {
             />
 
             {/* Export Section */}
-            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-2 border-primary/20 rounded-xl p-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold">{t("exportReady")}</h3>
-                  <p className="text-sm text-muted-foreground">
+            <div className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border-2 border-primary/30 rounded-2xl p-8">
+              {/* Background decoration */}
+              <div className="absolute -right-8 -top-8 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
+              <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-xl" />
+              
+              <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="text-center sm:text-left">
+                  <h3 className="text-xl font-bold">{t("exportReady")}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
                     {t("exportReadyDesc")}
                   </p>
                 </div>
@@ -216,16 +224,16 @@ export default function Home() {
                   size="lg"
                   onClick={handleExport}
                   disabled={isExporting}
-                  className="min-w-[200px] h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+                  className="group relative min-w-[240px] h-14 text-lg font-bold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-xl hover:shadow-2xl hover:shadow-primary/25 hover:scale-105 transition-all duration-300 rounded-xl"
                 >
                   {isExporting ? (
                     <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      <Loader2 className="h-6 w-6 mr-2 animate-spin" />
                       {t("exporting")}
                     </>
                   ) : (
                     <>
-                      <Download className="h-5 w-5 mr-2" />
+                      <Download className="h-6 w-6 mr-2 group-hover:animate-bounce" />
                       {t("downloadZwo")}
                     </>
                   )}

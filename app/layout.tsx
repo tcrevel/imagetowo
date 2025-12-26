@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
+import { SettingsProvider } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "ImageToFit - Workout Image to ZWO Converter",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <I18nProvider>
-          {children}
+          <SettingsProvider>
+            {children}
+          </SettingsProvider>
         </I18nProvider>
       </body>
     </html>
