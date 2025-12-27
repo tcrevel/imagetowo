@@ -16,10 +16,11 @@
  */
 
 import React, { useCallback, useState, useRef } from "react";
-import { Upload, Camera, X, Loader2 } from "lucide-react";
+import { Upload, Camera, X, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, useI18n } from "@/lib/i18n";
+import { useQuota, formatResetTime } from "@/lib/hooks";
 
 // ============================================================================
 // Types
@@ -50,11 +51,21 @@ export function Uploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const t = useTranslation();
+  const { locale } = useI18n();
+  const { quota, hasQuota } = useQuota();
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  const isDisabled = isLoading || !hasQuota;
 
   const validateFile = useCallback(
     (file: File): string | null => {
+      // Check quota first
+      if (!hasQuota) {
+        return locale === "fr" 
+          ? "Limite journalière atteinte. Réessayez demain."
+          : "Daily limit reached. Please try again tomorrow.";
+      }
+      
       if (!accept.split(",").includes(file.type)) {
         return `Invalid file type. Please upload: ${accept.replace(/image\//g, "").toUpperCase()}`;
       }
@@ -191,58 +202,83 @@ export function Uploader({
         </div>
       ) : (
         <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={() => fileInputRef.current?.click()}
+          onDrop={isDisabled ? undefined : handleDrop}
+          onDragOver={isDisabled ? undefined : handleDragOver}
+          onDragLeave={isDisabled ? undefined : handleDragLeave}
+          onClick={() => !isDisabled && fileInputRef.current?.click()}
           className={cn(
-            "relative border-2 border-dashed rounded-lg p-8 transition-colors cursor-pointer",
+            "relative border-2 border-dashed rounded-lg p-8 transition-colors",
             "flex flex-col items-center justify-center gap-4 min-h-[200px]",
-            isDragging
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
+            isDisabled 
+              ? "border-muted-foreground/20 bg-muted/30 cursor-not-allowed"
+              : isDragging
+                ? "border-primary bg-primary/5 cursor-pointer"
+                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50 cursor-pointer"
           )}
         >
-          <Upload
-            className={cn(
-              "h-12 w-12 transition-colors",
-              isDragging ? "text-primary" : "text-muted-foreground"
-            )}
-          />
-          <div className="text-center">
-            <p className="text-sm font-medium">
-              {isDragging ? t("dropHere") : t("dropImage")}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("maxSize")} {maxSizeMB}MB
-            </p>
-          </div>
+          {/* Quota exhausted overlay */}
+          {!hasQuota && quota?.enabled && (
+            <div className="text-center">
+              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <p className="text-sm font-medium text-muted-foreground">
+                {locale === "fr" ? "Limite journalière atteinte" : "Daily limit reached"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {locale === "fr" ? "Réinitialisation dans" : "Resets in"}{" "}
+                {quota?.resetAt && formatResetTime(quota.resetAt, locale)}
+              </p>
+            </div>
+          )}
+          
+          {/* Normal drop zone content */}
+          {(hasQuota || !quota?.enabled) && (
+            <>
+              <Upload
+                className={cn(
+                  "h-12 w-12 transition-colors",
+                  isDragging ? "text-primary" : "text-muted-foreground"
+                )}
+              />
+              <div className="text-center">
+                <p className="text-sm font-medium">
+                  {isDragging ? t("dropHere") : t("dropImage")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("maxSize")} {maxSizeMB}MB
+                </p>
+              </div>
+            </>
+          )}
 
-          {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                fileInputRef.current?.click();
-              }}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              {t("browse")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                cameraInputRef.current?.click();
-              }}
-            >
-              <Camera className="h-4 w-4 mr-2" />
-              {t("takePhoto")}
-            </Button>
-          </div>
+          {/* Action buttons - only show when quota available */}
+          {(hasQuota || !quota?.enabled) && (
+            <div className="flex flex-col sm:flex-row gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDisabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {t("browse")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDisabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cameraInputRef.current?.click();
+                }}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                {t("takePhoto")}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

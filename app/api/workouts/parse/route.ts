@@ -6,6 +6,7 @@
  * Constitution Principle I: Security-First API
  * - Server-side only OpenAI calls
  * - File validation before processing
+ * - Rate limiting per user (IP + fingerprint)
  * 
  * Constitution Principle II: Honest AI
  * - Returns confidence scores
@@ -16,6 +17,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { parseWorkoutImage } from "@/lib/services/openai";
+import { 
+  generateUserId, 
+  getClientIp, 
+  getFingerprint, 
+  checkRateLimitAsync, 
+  consumeRateLimitAsync 
+} from "@/lib/services/rate-limit";
 import { getServerEnv } from "@/lib/utils/env";
 import type { ParseError } from "@/lib/schemas";
 
@@ -32,6 +40,38 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export async function POST(request: NextRequest) {
   try {
     const env = getServerEnv();
+    
+    // Rate limiting check
+    if (env.RATE_LIMIT_ENABLED) {
+      const ip = getClientIp(request);
+      const fingerprint = getFingerprint(request);
+      const userId = generateUserId(ip, fingerprint);
+      
+      const rateLimitCheck = await checkRateLimitAsync(userId);
+      
+      if (!rateLimitCheck.allowed) {
+        return NextResponse.json(
+          { 
+            error: "Daily limit reached. Please try again tomorrow.",
+            code: "RATE_LIMITED" as const,
+            remaining: 0,
+            limit: rateLimitCheck.limit,
+            resetAt: rateLimitCheck.resetAt.toISOString(),
+            storage: rateLimitCheck.storage,
+          },
+          { 
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": rateLimitCheck.limit.toString(),
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": rateLimitCheck.resetAt.toISOString(),
+              "X-RateLimit-Storage": rateLimitCheck.storage,
+              "Retry-After": Math.ceil((rateLimitCheck.resetAt.getTime() - Date.now()) / 1000).toString(),
+            },
+          }
+        );
+      }
+    }
     
     // Parse multipart form data
     const formData = await request.formData();
@@ -77,10 +117,39 @@ export async function POST(request: NextRequest) {
       notes,
     });
     
+    // Consume rate limit after successful parsing
+    let rateLimitHeaders: Record<string, string> = {};
+    if (env.RATE_LIMIT_ENABLED) {
+      const ip = getClientIp(request);
+      const fingerprint = getFingerprint(request);
+      const userId = generateUserId(ip, fingerprint);
+      const consumed = await consumeRateLimitAsync(userId);
+      
+      rateLimitHeaders = {
+        "X-RateLimit-Limit": consumed.limit.toString(),
+        "X-RateLimit-Remaining": consumed.remaining.toString(),
+        "X-RateLimit-Reset": consumed.resetAt.toISOString(),
+        "X-RateLimit-Storage": consumed.storage,
+      };
+    }
+    
     // Return appropriate status based on confidence
     const status = result.confidence < 0.5 ? 422 : 200;
     
-    return NextResponse.json(result, { status });
+    return NextResponse.json(
+      {
+        ...result,
+        rateLimit: env.RATE_LIMIT_ENABLED ? {
+          remaining: parseInt(rateLimitHeaders["X-RateLimit-Remaining"] || "0"),
+          limit: parseInt(rateLimitHeaders["X-RateLimit-Limit"] || "5"),
+          resetAt: rateLimitHeaders["X-RateLimit-Reset"],
+        } : undefined,
+      },
+      { 
+        status,
+        headers: rateLimitHeaders,
+      }
+    );
   } catch (error) {
     console.error("Parse error:", error);
     

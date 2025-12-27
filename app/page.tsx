@@ -16,8 +16,10 @@ import { Uploader } from "@/components/uploader";
 import { WorkoutEditor } from "@/components/workout-editor";
 import { WorkoutMetrics } from "@/components/workout-metrics";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { QuotaBadge } from "@/components/quota-badge";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
+import { useQuota } from "@/lib/hooks";
 import type { Workout, ParseResponse } from "@/lib/schemas";
 
 // ============================================================================
@@ -37,6 +39,8 @@ export default function Home() {
   const [confidence, setConfidence] = useState<number>(0);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { fingerprint, updateQuota, hasQuota } = useQuota();
 
   // Handle image upload and parsing
   const handleUpload = useCallback(async (file: File) => {
@@ -50,15 +54,29 @@ export default function Home() {
       const response = await fetch("/api/workouts/parse", {
         method: "POST",
         body: formData,
+        headers: fingerprint ? { "X-Client-Fingerprint": fingerprint } : {},
       });
 
       const data = await response.json();
+
+      // Handle rate limit error
+      if (response.status === 429) {
+        throw new Error(data.error || "Daily limit reached");
+      }
 
       if (!response.ok && !data.workout) {
         throw new Error(data.error || "Failed to parse workout");
       }
 
-      const result = data as ParseResponse;
+      const result = data as ParseResponse & { 
+        rateLimit?: { remaining: number; limit: number; resetAt: string } 
+      };
+      
+      // Update quota from response
+      if (result.rateLimit) {
+        updateQuota(result.rateLimit.remaining, result.rateLimit.limit, result.rateLimit.resetAt);
+      }
+      
       setWorkout(result.workout);
       setWarnings(result.warnings);
       setConfidence(result.confidence);
@@ -67,7 +85,7 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Failed to parse workout");
       setState("upload");
     }
-  }, []);
+  }, [fingerprint, updateQuota]);
 
   // Handle ZWO export
   const handleExport = useCallback(async () => {
@@ -139,6 +157,13 @@ export default function Home() {
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-3xl">
+        {/* Quota Badge - Show on upload state */}
+        {state === "upload" && (
+          <div className="flex justify-center mb-6">
+            <QuotaBadge />
+          </div>
+        )}
+        
         {/* Hero Section - Only on upload state */}
         {state === "upload" && (
           <div className="text-center mb-8">

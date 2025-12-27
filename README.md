@@ -15,6 +15,7 @@
 - 🔄 **Drag & Drop** - Réorganisez les étapes par glisser-déposer
 - 📥 **Export ZWO** - Téléchargez au format .zwo compatible Zwift
 - 🌐 **Bilingue** - Interface en français et anglais
+- 🔒 **Rate Limiting** - Protection contre les abus avec quota journalier (Redis/mémoire)
 
 ## 🚀 Démarrage rapide
 
@@ -92,6 +93,7 @@ imagetowo/
 │   ├── api/
 │   │   └── workouts/
 │   │       ├── parse/          # POST - Analyse d'image avec GPT-4 Vision
+│   │       ├── quota/          # GET - Vérification du quota restant
 │   │       └── export/zwo/     # POST - Génération du fichier ZWO
 │   ├── layout.tsx
 │   └── page.tsx
@@ -100,12 +102,16 @@ imagetowo/
 │   ├── workout-editor.tsx      # Éditeur de workout complet
 │   ├── workout-chart.tsx       # Visualisation graphique
 │   ├── step-editor.tsx         # Éditeur d'étape individuelle
+│   ├── quota-badge.tsx         # Affichage du quota restant
 │   └── language-switcher.tsx   # Sélecteur de langue
 ├── lib/
+│   ├── hooks/                  # React hooks (useQuota)
 │   ├── i18n/                   # Internationalisation EN/FR
 │   ├── schemas/                # Schémas Zod (workout, step, API)
 │   └── services/
 │       ├── openai.ts           # Intégration GPT-4 Vision
+│       ├── rate-limit.ts       # Service de rate limiting
+│       ├── redis.ts            # Client Redis singleton
 │       └── zwo.ts              # Génération XML ZWO
 └── __tests__/                  # Tests Vitest
 ```
@@ -136,8 +142,56 @@ npm start
 ### Déploiement sur Vercel
 
 1. Connectez votre repository GitHub à Vercel
-2. Ajoutez la variable d'environnement `OPENAI_API_KEY`
+2. Ajoutez les variables d'environnement :
+   - `OPENAI_API_KEY` (requis)
+   - `REDIS_URL` (optionnel, recommandé pour le rate limiting distribué)
+   - `DAILY_PARSE_LIMIT` (optionnel, défaut: 5)
 3. Déployez !
+
+> 💡 **Astuce** : Utilisez [Upstash](https://upstash.com/) pour un Redis gratuit compatible Vercel.
+
+## � Rate Limiting
+
+ImageToWo inclut un système de limitation de requêtes pour contrôler les coûts API et prévenir les abus.
+
+### Fonctionnement
+
+- **Identification** : Combinaison IP + fingerprint navigateur
+- **Quota** : 5 analyses par utilisateur par jour (configurable)
+- **Stockage** : Redis (recommandé) ou mémoire (fallback automatique)
+
+### Configuration
+
+```bash
+# Activer/désactiver le rate limiting (défaut: true)
+RATE_LIMIT_ENABLED=true
+
+# Nombre d'analyses par jour par utilisateur (défaut: 5)
+DAILY_PARSE_LIMIT=5
+
+# URL Redis pour le stockage distribué (optionnel)
+# Sans Redis, utilise le stockage en mémoire (instance unique)
+REDIS_URL=redis://localhost:6379
+```
+
+### Providers Redis recommandés
+
+| Provider | Tier gratuit | URL |
+|----------|--------------|-----|
+| [Upstash](https://upstash.com/) | 10k requêtes/jour | `rediss://...@xxx.upstash.io:6379` |
+| [Redis Cloud](https://redis.com/try-free/) | 30MB | `redis://...@xxx.redislabs.com:port` |
+| [Railway](https://railway.app/) | $5 crédit | Variable `REDIS_URL` fournie |
+| [Render](https://render.com/) | 25MB | Variable `REDIS_URL` fournie |
+
+### Headers de réponse
+
+Les endpoints renvoient des headers informatifs :
+
+```
+X-RateLimit-Limit: 5          # Quota total
+X-RateLimit-Remaining: 3      # Requêtes restantes
+X-RateLimit-Reset: 1234567890 # Timestamp de réinitialisation
+```
 
 ## 🛠️ Technologies
 
@@ -147,6 +201,7 @@ npm start
 - **UI**: [shadcn/ui](https://ui.shadcn.com/)
 - **Validation**: [Zod v4](https://zod.dev/)
 - **IA**: [OpenAI GPT-4 Vision](https://openai.com/)
+- **Cache**: [Redis](https://redis.io/) (optionnel, pour rate limiting distribué)
 - **Tests**: [Vitest](https://vitest.dev/)
 
 ## 📄 Format ZWO
