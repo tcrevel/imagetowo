@@ -18,6 +18,16 @@ const envSchema = z.object({
     .string()
     .default("image/jpeg,image/png,image/webp,image/heic")
     .transform((val) => val.split(",")),
+  
+  // Rate limiting
+  DAILY_PARSE_LIMIT: z.coerce.number().default(5), // 5 analyses per day per user
+  RATE_LIMIT_ENABLED: z
+    .string()
+    .default("true")
+    .transform((val) => val.toLowerCase() === "true"),
+  
+  // Redis (optional - falls back to in-memory if not provided)
+  REDIS_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

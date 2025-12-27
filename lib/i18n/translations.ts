@@ -120,6 +120,12 @@ export const translations = {
     z3: "Z3 Tempo",
     z4: "Z4 Threshold",
     z5: "Z5 VO2max",
+    
+    // Quota
+    quotaRemaining: "analyses remaining today",
+    quotaExhausted: "Daily limit reached",
+    quotaResetIn: "Resets in",
+    quotaUnlimited: "Unlimited",
   },
   
   fr: {
@@ -235,6 +241,12 @@ export const translations = {
     z3: "Z3 Tempo",
     z4: "Z4 Seuil",
     z5: "Z5 VO2max",
+    
+    // Quota
+    quotaRemaining: "analyses restantes aujourd'hui",
+    quotaExhausted: "Limite journalière atteinte",
+    quotaResetIn: "Réinitialisation dans",
+    quotaUnlimited: "Illimité",
   },
 } as const;
 
